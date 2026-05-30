@@ -10,6 +10,8 @@ import (
 func (app *application) routes() http.Handler {
 	router := httprouter.New()
 
+	router.NotFound = http.HandlerFunc(app.notFoundResponse)
+	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
 	standard := alice.New(app.logRequest, app.setHeaders)
 
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
