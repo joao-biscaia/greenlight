@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"greenlight.joaobiscaia.io/internal/data"
+	"greenlight.joaobiscaia.io/internal/jsonlog"
 )
 
 // will later be generated at build time
@@ -30,7 +31,7 @@ type config struct {
 
 type application struct {
 	config config
-	logger *log.Logger
+	logger *jsonlog.Logger
 	models data.Models
 }
 
@@ -46,15 +47,15 @@ func main() {
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
 	flag.Parse()
 
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	db, err := openDB(cfg)
 	if err != nil {
-		logger.Fatal(err)
+		logger.PrintFatal(err, nil)
 	}
 	defer db.Close()
 
-	logger.Printf("Database connection pool established\n")
+	logger.PrintInfo("Database connection pool established\n", nil)
 
 	app := &application{
 		config: cfg,
@@ -68,13 +69,17 @@ func main() {
 		Addr:         fmt.Sprintf(":%d", cfg.port),
 		Handler:      router,
 		ReadTimeout:  time.Minute,
+		ErrorLog:     log.New(logger, "", 0),
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  30 * time.Second,
 	}
 
-	logger.Printf("Starting %s server on %v", cfg.env, cfg.port)
+	logger.PrintInfo("Starting %s server on %v", map[string]string{
+		"addr": srv.Addr,
+		"env":  cfg.env,
+	})
 	err = srv.ListenAndServe()
-	logger.Fatal(err)
+	logger.PrintFatal(err, nil)
 }
 
 func openDB(cfg config) (*sql.DB, error) {
