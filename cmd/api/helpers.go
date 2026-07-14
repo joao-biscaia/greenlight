@@ -127,3 +127,16 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 func (app *application) badRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
 	app.errorResponse(w, r, http.StatusBadRequest, err.Error())
 }
+
+func (app *application) background(fn func()) {
+	app.wg.Add(1)
+	go func() {
+		defer func() {
+			defer app.wg.Done()
+			if err := recover(); err != nil {
+				app.logger.PrintError(fmt.Errorf("%s", err), nil)
+			}
+		}()
+		fn()
+	}()
+}
