@@ -13,16 +13,19 @@ func (app *application) routes() http.Handler {
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
 	standard := alice.New(app.recoverPanic, app.rateLimit, app.authenticate)
+	authenticated := standard.Append(app.requireActivatedUser)
 
-	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/movies", app.listMoviesHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/movies", app.createMovieHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.showMovieHandler)
-	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.updateMovieHandler)
-	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.deleteMovieHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
-	router.HandlerFunc(http.MethodPut, "/v1/users/activated", app.activateUserHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
+	router.Handler(http.MethodGet, "/v1/healthcheck", standard.ThenFunc(app.healthcheckHandler))
+
+	router.Handler(http.MethodGet, "/v1/movies", authenticated.ThenFunc(app.listMoviesHandler))
+	router.Handler(http.MethodPost, "/v1/movies", authenticated.ThenFunc(app.createMovieHandler))
+	router.Handler(http.MethodGet, "/v1/movies/:id", authenticated.ThenFunc(app.showMovieHandler))
+	router.Handler(http.MethodPatch, "/v1/movies/:id", authenticated.ThenFunc(app.updateMovieHandler))
+	router.Handler(http.MethodDelete, "/v1/movies/:id", authenticated.ThenFunc(app.deleteMovieHandler))
+
+	router.Handler(http.MethodPost, "/v1/users", standard.ThenFunc(app.registerUserHandler))
+	router.Handler(http.MethodPut, "/v1/users/activated", standard.ThenFunc(app.activateUserHandler))
+	router.Handler(http.MethodPost, "/v1/tokens/authentication", standard.ThenFunc(app.createAuthenticationTokenHandler))
 
 	return standard.Then(router)
 }
