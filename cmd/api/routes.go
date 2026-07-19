@@ -27,5 +27,7 @@ func (app *application) routes() http.Handler {
 	router.Handler(http.MethodPut, "/v1/users/activated", standard.ThenFunc(app.activateUserHandler))
 	router.Handler(http.MethodPost, "/v1/tokens/authentication", standard.ThenFunc(app.createAuthenticationTokenHandler))
 
+	router.Handler(http.MethodPost, "/v1/tokens/activation", standard.ThenFunc(app.createActivationTokenHandler))
+
 	return standard.Then(router)
 }
