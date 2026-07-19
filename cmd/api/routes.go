@@ -13,15 +13,14 @@ func (app *application) routes() http.Handler {
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
 	standard := alice.New(app.recoverPanic, app.rateLimit, app.authenticate)
-	authenticated := standard.Append(app.requireActivatedUser)
 
 	router.Handler(http.MethodGet, "/v1/healthcheck", standard.ThenFunc(app.healthcheckHandler))
 
-	router.Handler(http.MethodGet, "/v1/movies", authenticated.ThenFunc(app.listMoviesHandler))
-	router.Handler(http.MethodPost, "/v1/movies", authenticated.ThenFunc(app.createMovieHandler))
-	router.Handler(http.MethodGet, "/v1/movies/:id", authenticated.ThenFunc(app.showMovieHandler))
-	router.Handler(http.MethodPatch, "/v1/movies/:id", authenticated.ThenFunc(app.updateMovieHandler))
-	router.Handler(http.MethodDelete, "/v1/movies/:id", authenticated.ThenFunc(app.deleteMovieHandler))
+	router.Handler(http.MethodGet, "/v1/movies", app.requirePermission("movies:read", standard.ThenFunc(app.listMoviesHandler)))
+	router.Handler(http.MethodPost, "/v1/movies", app.requirePermission("movies:write", standard.ThenFunc(app.createMovieHandler)))
+	router.Handler(http.MethodGet, "/v1/movies/:id", app.requirePermission("movies:read", standard.ThenFunc(app.showMovieHandler)))
+	router.Handler(http.MethodPatch, "/v1/movies/:id", app.requirePermission("movies:write", standard.ThenFunc(app.updateMovieHandler)))
+	router.Handler(http.MethodDelete, "/v1/movies/:id", app.requirePermission("movies:write", standard.ThenFunc(app.deleteMovieHandler)))
 
 	router.Handler(http.MethodPost, "/v1/users", standard.ThenFunc(app.registerUserHandler))
 	router.Handler(http.MethodPut, "/v1/users/activated", standard.ThenFunc(app.activateUserHandler))
