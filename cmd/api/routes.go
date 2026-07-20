@@ -12,7 +12,7 @@ func (app *application) routes() http.Handler {
 
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
-	standard := alice.New(app.recoverPanic, app.rateLimit, app.authenticate)
+	standard := alice.New(app.recoverPanic, app.enableCors, app.rateLimit, app.authenticate)
 
 	router.Handler(http.MethodGet, "/v1/healthcheck", standard.ThenFunc(app.healthcheckHandler))
 
