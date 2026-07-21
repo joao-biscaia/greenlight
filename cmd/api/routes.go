@@ -1,6 +1,7 @@
 package main
 
 import (
+	"expvar"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -12,21 +13,22 @@ func (app *application) routes() http.Handler {
 
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
-	standard := alice.New(app.recoverPanic, app.enableCors, app.rateLimit, app.authenticate)
+	standard := alice.New(app.metrics, app.recoverPanic, app.enableCors, app.rateLimit, app.authenticate)
 
-	router.Handler(http.MethodGet, "/v1/healthcheck", standard.ThenFunc(app.healthcheckHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
 
-	router.Handler(http.MethodGet, "/v1/movies", app.requirePermission("movies:read", standard.ThenFunc(app.listMoviesHandler)))
-	router.Handler(http.MethodPost, "/v1/movies", app.requirePermission("movies:write", standard.ThenFunc(app.createMovieHandler)))
-	router.Handler(http.MethodGet, "/v1/movies/:id", app.requirePermission("movies:read", standard.ThenFunc(app.showMovieHandler)))
-	router.Handler(http.MethodPatch, "/v1/movies/:id", app.requirePermission("movies:write", standard.ThenFunc(app.updateMovieHandler)))
-	router.Handler(http.MethodDelete, "/v1/movies/:id", app.requirePermission("movies:write", standard.ThenFunc(app.deleteMovieHandler)))
+	router.Handler(http.MethodGet, "/v1/movies", app.requirePermission("movies:read", app.listMoviesHandler))
+	router.Handler(http.MethodPost, "/v1/movies", app.requirePermission("movies:write", app.createMovieHandler))
+	router.Handler(http.MethodGet, "/v1/movies/:id", app.requirePermission("movies:read", app.showMovieHandler))
+	router.Handler(http.MethodPatch, "/v1/movies/:id", app.requirePermission("movies:write", app.updateMovieHandler))
+	router.Handler(http.MethodDelete, "/v1/movies/:id", app.requirePermission("movies:write", app.deleteMovieHandler))
 
-	router.Handler(http.MethodPost, "/v1/users", standard.ThenFunc(app.registerUserHandler))
-	router.Handler(http.MethodPut, "/v1/users/activated", standard.ThenFunc(app.activateUserHandler))
-	router.Handler(http.MethodPost, "/v1/tokens/authentication", standard.ThenFunc(app.createAuthenticationTokenHandler))
+	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
+	router.HandlerFunc(http.MethodPut, "/v1/users/activated", app.activateUserHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
 
-	router.Handler(http.MethodPost, "/v1/tokens/activation", standard.ThenFunc(app.createActivationTokenHandler))
+	router.HandlerFunc(http.MethodPost, "/v1/tokens/activation", app.createActivationTokenHandler)
+	router.Handler(http.MethodGet, "/debug/vars", expvar.Handler())
 
 	return standard.Then(router)
 }
