@@ -1,0 +1,8 @@
+{
+    email joaopedro.jpbf@gmail.com
+}
+
+kaidro.com.br {
+    respond /debug/* "Not Permitted" 403
+    reverse_proxy localhost:4000
+}
